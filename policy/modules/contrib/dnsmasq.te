@@ -15,6 +15,9 @@ init_script_file(dnsmasq_initrc_exec_t)
 type dnsmasq_etc_t;
 files_config_file(dnsmasq_etc_t)
 
+type dnsmasq_usr_share_t;
+files_type(dnsmasq_usr_share_t);
+
 type dnsmasq_lease_t;
 files_type(dnsmasq_lease_t)
 
@@ -88,6 +91,8 @@ fs_search_auto_mountpoints(dnsmasq_t)
 auth_use_nsswitch(dnsmasq_t)
 
 logging_send_syslog_msg(dnsmasq_t)
+
+read_files_pattern(dnsmasq_t, dnsmasq_usr_share_t, dnsmasq_usr_share_t)
 
 miscfiles_read_localization(dnsmasq_t)
 
