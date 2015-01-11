@@ -1,0 +1,11 @@
+/etc/tlsdate(/.*)?		--	gen_context(system_u:object_r:tlsdate_etc_t,s0)
+
+/etc/rc\.d/init\.d/tlsdate	--	gen_context(system_u:object_r:tlsdate_initrc_exec_t,s0)
+/etc/rc\.d/init\.d/tlsdated	--	gen_context(system_u:object_r:tlsdated_initrc_exec_t,s0)
+
+/usr/bin/tlsdate		--	gen_context(system_u:object_r:tlsdate_exec_t,s0)
+/usr/bin/tlsdate-helper		--	gen_context(system_u:object_r:tlsdate-helper_exec_t,s0)
+
+/usr/sbin/tlsdated		--	gen_context(system_u:object_r:tlsdated_exec_t,s0)
+
+/var/cache/tlsdated(/.*)?		gen_context(system_u:object_r:tlsdated_var_cache_t,s0)

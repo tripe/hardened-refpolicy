@@ -1,0 +1,136 @@
+policy_module(tlsdate, 1.00)
+
+
+gen_require(`
+	type clock_device_t;
+	type locale_t;
+')
+
+
+########################################
+#
+# Declarations
+#
+
+## <desc>
+##	<p>
+##	Allow tlsdate-helper to make clearnet connections.
+##	</p>
+## </desc>
+gen_tunable(tlsdate_helper_connect_clearnet, true)
+
+## <desc>
+##	<p>
+##	Allow tlsdate-helper to connect to tor ports.
+##	</p>
+## </desc>
+gen_tunable(tlsdate_helper_connect_tor, false)
+
+type tlsdate_t;
+type tlsdate_exec_t;
+init_system_domain(tlsdate_t, tlsdate_exec_t)
+
+type tlsdate-helper_t;
+type tlsdate-helper_exec_t;
+init_system_domain(tlsdate-helper_t, tlsdate-helper_exec_t)
+
+type tlsdated_t;
+type tlsdated_exec_t;
+init_daemon_domain(tlsdated_t, tlsdated_exec_t)
+
+type tlsdate_etc_t;
+files_config_file(tlsdate_etc_t)
+
+type tlsdate_initrc_exec_t;
+init_script_file(tlsdate_initrc_exec_t)
+
+type tlsdated_initrc_exec_t;
+init_script_file(tlsdated_initrc_exec_t)
+
+type tlsdated_var_cache_t;
+files_type(tlsdated_var_cache_t)
+
+########################################
+#
+# tlsdated_t local policy
+#
+
+allow tlsdated_t self : capability { sys_time setgid setuid };
+allow tlsdated_t self : fifo_file { read write };
+allow tlsdated_t self : netlink_route_socket { create bind };
+allow tlsdated_t self : unix_dgram_socket { create connect };
+
+allow tlsdated_t clock_device_t : chr_file { read open ioctl };
+
+logging_send_syslog_msg(tlsdated_t)
+
+allow tlsdated_t locale_t : file { read open };
+
+auth_use_nsswitch(tlsdated_t)
+
+allow tlsdated_t tlsdate_etc_t : file { read open };
+
+kernel_dontaudit_search_sysctl(tlsdated_t)
+
+corecmd_search_bin(tlsdated_t)
+domtrans_pattern(tlsdated_t, tlsdate_exec_t, tlsdate_t)
+
+files_search_var(tlsdated_t)
+create_files_pattern(tlsdated_t, tlsdated_var_cache_t, tlsdated_var_cache_t)
+allow tlsdated_t tlsdated_var_cache_t : file { read write rename };
+delete_files_pattern(tlsdated_t, tlsdated_var_cache_t, tlsdated_var_cache_t)
+
+########################################k
+#
+# tlsdate_t local policy
+#
+
+allow tlsdate_t tlsdated_t : netlink_route_socket { read write };
+
+allow tlsdate_t clock_device_t : chr_file read;
+
+allow tlsdate_t tlsdate_etc_t : file read;
+
+corecmd_search_bin(tlsdate_t)
+domtrans_pattern(tlsdate_t, tlsdate-helper_exec_t, tlsdate-helper_t)
+
+########################################k
+#
+# tlsdate-helper_t local policy
+#
+
+allow tlsdate-helper_t tlsdated_t : fifo_file { write read getattr };
+allow tlsdate-helper_t tlsdated_t : process sigchld;
+allow tlsdate-helper_t tlsdated_t : netlink_route_socket { read write };
+
+allow tlsdate-helper_t tlsdated_t : fd use;
+allow tlsdate-helper_t clock_device_t : chr_file read;
+
+allow tlsdate-helper_t locale_t : file { read open };
+dontaudit tlsdate-helper_t locale_t : file getattr;
+
+auth_use_nsswitch(tlsdate-helper_t)
+
+miscfiles_read_generic_certs(tlsdate-helper_t)
+
+allow tlsdate-helper_t tlsdate_etc_t : file read;
+
+kernel_dontaudit_search_sysctl(tlsdate-helper_t)
+
+
+# This throws a syntax error as a boolean...
+#
+#tunable_policy(`tlsdate_helper_connect_clearnet',`
+#
+	sysnet_dns_name_resolve(tlsdate-helper_t)
+#')
+
+tunable_policy(`tlsdate_helper_connect_clearnet',`
+
+	corenet_tcp_connect_http_port(tlsdate-helper_t)
+')
+
+tunable_policy(`tlsdate_helper_connect_tor',`
+
+	corenet_tcp_connect_tor_port(tlsdate-helper_t)
+')
