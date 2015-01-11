@@ -1,0 +1,161 @@
+## <summary>torsocks policy</summary>
+## <desc>
+##	<p>
+##		Policy for torsocks.
+##	</p>
+##	<p>
+##		Note that for a domain to connect to tor with torsocks it must
+##		be entered with noatsecure.
+##	</p>
+## </desc>
+
+
+###############################
+## <summary>
+##	Allow domain to read torsocks config.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain from which to use.
+##	</summary>
+## </param>
+
+interface(`torsocks_read_config',`
+
+	gen_require(`
+		type tor_etc_t;
+		type torsocks_etc_t;
+	')
+
+	files_search_etc($1)
+	read_files_pattern( $1, tor_etc_t, torsocks_etc_t )
+')
+
+
+###############################
+## <summary>
+##	Allow domain to mmap libtorsocks.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain from which to mmap.
+##	</summary>
+## </param>
+
+interface(`torsocks_mmap',`
+
+	gen_require(`
+		type torsocks_usr_lib_t;
+	')
+
+	allow $1 torsocks_usr_lib_t : lnk_file read_lnk_file_perms;
+	mmap_files_pattern( $1, torsocks_usr_lib_t, torsocks_usr_lib_t )
+')
+
+
+###############################
+## <summary>
+##	<p>
+##	Allow domain to preload libtorsocks.
+##	</p>
+##	<p>
+##	This does not give permission to connect with tor.
+##	</p>
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain from which to preload.
+##	</summary>
+## </param>
+
+interface(`torsocks_preload',`
+
+	torsocks_read_config($1)
+	torsocks_mmap($1)
+')
+
+
+###############################
+## <summary>
+##	<p>
+##	Allow domain connect to tor with libtorsocks.
+##	</p>
+##	<p>
+##	Note that domain transitions from the caller of torsocks to the
+##	connecting domain must be made with noatsecure.
+##	</p>
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain from which to connect.
+##	</summary>
+## </param>
+
+interface(`torsocks_tcp_connect',`
+
+	corenet_tcp_connect_tor_port($1)
+
+	torsocks_read_config($1)
+
+	torsocks_preload($1)
+')
+
+
+###############################
+## <summary>
+##	Base template for torsocks.
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix of the torsocks domain.
+##	</summary>
+## </param>
+## <param name="domain">
+##	<summary>
+##	Domain from which to exec.
+##	</summary>
+## </param>
+
+template(`torsocks_base_template',`
+
+	gen_require(`
+		attribute torsocks_domain;
+		')
+
+	type $1_torsocks_t, torsocks_domain;
+	application_domain( $1_torsocks_t, torsocks_exec_t )
+
+	domtrans_pattern( $2, torsocks_exec_t, $1_torsocks_t )
+')
+
+
+###############################
+## <summary>
+##	Role template for torsocks.
+## </summary>
+## <param name="prefix">
+##	<summary>
+##	Prefix of the torsocks domain.
+##	</summary>
+## </param>
+## <param name="domain">
+##	<summary>
+##	Domain from which to exec.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role with which to assign types.
+##	</summary>
+## </param>
+
+template(`torsocks_role_template',`
+
+	gen_require(`
+		role $3;
+	')
+
+	torsocks_base_template( $1, $2 )
+
+	role $3 types $1_torsocks_t;
+')

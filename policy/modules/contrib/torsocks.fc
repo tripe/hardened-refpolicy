@@ -1,0 +1,5 @@
+/etc/tor/torsocks\.conf		--	gen_context(system_u:object_r:torsocks_etc_t,s0)
+
+/usr/bin/torsocks		--	gen_context(system_u:object_r:torsocks_exec_t,s0)
+
+/usr/lib/torsocks(/.*)?			gen_context(system_u:object_r:torsocks_usr_lib_t,s0)

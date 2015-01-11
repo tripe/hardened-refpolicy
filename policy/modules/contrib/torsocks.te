@@ -1,0 +1,73 @@
+policy_module(torsocks, 1.00)
+
+
+gen_require(`
+	type shell_exec_t;
+	type staff_t;
+	type user_t;
+	type user_devpts_t;
+	type user_tty_device_t;
+')
+
+########################################
+#
+# Declarations
+#
+
+attribute torsocks_domain;
+
+type torsocks_exec_t;
+application_executable_file(torsocks_exec_t)
+
+attribute torsocks_user_domain;
+attribute torsocks_connect_domain;
+
+type torsocks_etc_t;
+files_config_file(torsocks_etc_t)
+
+type torsocks_usr_lib_t;
+files_type(torsocks_usr_lib_t)
+
+########################################
+#
+# Local policy
+#
+
+torsocks_role_template( staff, staff_t, staff_r )
+torsocks_role_template( user, user_t, user_r )
+
+typeattribute staff_t torsocks_user_domain;
+typeattribute user_t torsocks_user_domain;
+
+########################################
+#
+# torsocks_domain policy
+#
+
+corecmd_search_bin(torsocks_domain)
+allow torsocks_domain shell_exec_t : file { read open };
+
+allow torsocks_domain { user_devpts_t user_tty_device_t } : chr_file { read write };
+
+torsocks_read_config(torsocks_domain)
+
+torsocks_mmap(torsocks_domain)
+miscfiles_read_localization(torsocks_domain)
+
+########################################
+#
+# torsocks_user_domain policy
+#
+
+torsocks_preload(torsocks_user_domain)
+
+# This is required to preserve ld preload.
+#
+allow torsocks_user_domain torsocks_connect_domain : process noatsecure;
+
+########################################
+#
+# torsocks_connect_domain policy
+#
+
+torsocks_tcp_connect(torsocks_connect_domain)
