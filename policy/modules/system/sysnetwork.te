@@ -1,4 +1,4 @@
-policy_module(sysnetwork, 1.16.1)
+policy_module(sysnetwork, 1.17.0)
 
 ########################################
 #
@@ -40,7 +40,7 @@ type net_conf_t alias resolv_conf_t;
 files_type(net_conf_t)
 
 ifdef(`distro_debian',`
-	init_daemon_run_dir(net_conf_t, "network")
+	init_daemon_pid_file(net_conf_t, dir, "network")
 ')
 
 ########################################
@@ -57,7 +57,7 @@ allow dhcpc_t self:fifo_file rw_fifo_file_perms;
 allow dhcpc_t self:tcp_socket create_stream_socket_perms;
 allow dhcpc_t self:udp_socket create_socket_perms;
 allow dhcpc_t self:packet_socket create_socket_perms;
-allow dhcpc_t self:netlink_route_socket { create_socket_perms nlmsg_read nlmsg_write };
+allow dhcpc_t self:netlink_route_socket create_netlink_socket_perms;
 
 allow dhcpc_t dhcp_etc_t:dir list_dir_perms;
 read_lnk_files_pattern(dhcpc_t, dhcp_etc_t, dhcp_etc_t)
@@ -276,8 +276,11 @@ allow ifconfig_t self:msg { send receive };
 allow ifconfig_t self:udp_socket create_socket_perms;
 # for /sbin/ip
 allow ifconfig_t self:packet_socket create_socket_perms;
+# generic netlink socket for iw
+# socket(PF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_GENERIC) = 3
+allow ifconfig_t self:netlink_socket create_socket_perms;
 allow ifconfig_t self:netlink_route_socket create_netlink_socket_perms;
-allow ifconfig_t self:netlink_xfrm_socket { create_netlink_socket_perms nlmsg_read };
+allow ifconfig_t self:netlink_xfrm_socket create_netlink_socket_perms;
 allow ifconfig_t self:tcp_socket { create ioctl };
 
 kernel_use_fds(ifconfig_t)
@@ -399,6 +402,15 @@ ifdef(`distro_gentoo',`
 	# Fixes bug 468874
 	allow dhcpc_t self:rawip_socket create_socket_perms;
 
+	# Fixes bug 530898
+	allow dhcpc_t self:netlink_kobject_uevent_socket client_stream_socket_perms;
+	# Also mentioned as AVCs in bug 530898. Not certain if this is needed but considering
+	# the dhcpc_t use case we currently allow it
+	allow dhcpc_t self:netlink_socket client_stream_socket_perms;
+
+	# Allow dhcpcd to set its control sockets
+	allow dhcpc_t dhcpc_var_run_t:sock_file manage_sock_file_perms;
+
 	# Allow dhcpc to set hostname (/proc/sys/kernel/hostname)
 	allow dhcpc_t self:capability sys_admin;
 	kernel_rw_kernel_sysctl(dhcpc_t)
@@ -406,4 +418,66 @@ ifdef(`distro_gentoo',`
 	# Fixes bug 468878
 	files_pid_filetrans(dhcpc_t, dhcpc_var_run_t, sock_file)
 	allow dhcpc_t self:unix_stream_socket { create_stream_socket_perms connectto };
+
+	optional_policy(`
+		resolvconf_client_domain(dhcpc_t)
+	')
+
+	#########################################
+	#
+	# dhcpc_script_t
+	#
+
+	# The purpose of the dhcpc_script_t domain is to handle the post-processing of 
+	# the dhcpcd ip renewal. dhcpcd (the tool) supports hooks for this, and I would
+	# assume others do as well. With the dhcpc_script_t domain we can isolate the
+	# privileges of the DHCP client itself from the hooks / flexibility that the developers
+	# introduced.
+
+	type dhcpc_script_t;
+	domain_type(dhcpc_script_t)
+	role dhcpc_roles types dhcpc_script_t;
+
+	type dhcpc_script_exec_t;
+	domain_entry_file(dhcpc_script_t, dhcpc_script_exec_t)
+
+	type dhcpc_script_tmp_t;
+	files_tmp_file(dhcpc_script_tmp_t)
+
+	########################################
+	#
+	# dhcpc script policy
+	#
+
+	allow dhcpc_script_t self:fifo_file rw_fifo_file_perms;
+
+	manage_files_pattern(dhcpc_script_t, dhcpc_script_tmp_t, dhcpc_script_tmp_t)
+	files_tmp_filetrans(dhcpc_script_t, dhcpc_script_tmp_t, { file dir })
+
+	manage_files_pattern(dhcpc_script_t, dhcpc_var_run_t, dhcpc_var_run_t)
+	files_pid_filetrans(dhcpc_script_t, dhcpc_var_run_t, { file dir })
+
+	kernel_read_network_state(dhcpc_script_t)
+	kernel_read_system_state(dhcpc_script_t)
+
+	corecmd_exec_bin(dhcpc_script_t)
+	corecmd_exec_shell(dhcpc_script_t)
+
+	files_read_etc_files(dhcpc_script_t)
+
+	init_use_script_fds(dhcpc_script_t)
+	init_use_script_ptys(dhcpc_script_t)
+
+	# Perhaps sysnet_domtrans_dhcpc_script could be used instead and positioned in the dhcpc_t section
+	domtrans_pattern(dhcpc_t, dhcpc_script_exec_t, dhcpc_script_t)
+
+	sysnet_manage_config(dhcpc_script_t)
+
+	optional_policy(`
+		hostname_run(dhcpc_script_t, dhcpc_roles)
+	')
+
+	optional_policy(`
+		ntp_manage_config(dhcpc_script_t)
+	')
 ')

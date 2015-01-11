@@ -1,4 +1,4 @@
-policy_module(init, 1.21.2)
+policy_module(init, 1.22.0)
 
 gen_require(`
 	class passwd rootok;
@@ -23,7 +23,10 @@ attribute init_run_all_scripts_domain;
 # Mark process types as daemons
 attribute daemon;
 
+# Mark file type as a daemon pid file
+attribute daemonpidfile;
 # Mark file type as a daemon run directory
+# TODO - this attribute is deprecated and kept for a short while for compatibility
 attribute daemonrundir;
 
 #
@@ -37,10 +40,16 @@ kernel_domtrans_to(init_t, init_exec_t)
 role system_r types init_t;
 
 #
-# init_var_run_t is the type for /var/run/shutdown.pid.
+# init_var_run_t is the type for /var/run/shutdown.pid and /var/run/systemd.
 #
 type init_var_run_t;
 files_pid_file(init_var_run_t)
+
+#
+# init_var_lib_t is the type for /var/lib/systemd.
+#
+type init_var_lib_t;
+files_type(init_var_lib_t)
 
 #
 # initctl_t is the type of the named pipe created
@@ -251,6 +260,11 @@ init_telinit(initrc_t)
 
 can_exec(initrc_t, init_script_file_type)
 
+create_dirs_pattern(initrc_t, daemonpidfile, daemonpidfile)
+manage_files_pattern(initrc_t, daemonpidfile, daemonpidfile)
+setattr_dirs_pattern(initrc_t, daemonpidfile, daemonpidfile)
+
+# TODO - this is deprecated supported for a short while for backwards compatibility
 create_dirs_pattern(initrc_t, daemonrundir, daemonrundir)
 setattr_dirs_pattern(initrc_t, daemonrundir, daemonrundir)
 
@@ -921,11 +935,17 @@ optional_policy(`
 ')
 
 ifdef(`distro_gentoo',`
+	# Attribute to assign to types that the initrc_t domain needs read access to
+	attribute init_script_readable;
+
 	#####################################
 	#
 	# Local initrc_t policy
 	#
 	allow initrc_t self:capability sys_admin;
+
+	read_files_pattern(initrc_t, init_script_readable, init_script_readable)
+	read_lnk_files_pattern(initrc_t, init_script_readable, init_script_readable)
 
 	manage_dirs_pattern(initrc_t, initrc_var_run_t, initrc_var_run_t)
 	files_pid_filetrans(initrc_t, initrc_var_run_t, dir)
@@ -933,6 +953,8 @@ ifdef(`distro_gentoo',`
 	kernel_write_proc_files(initrc_t)
 
 	dev_manage_sysfs_dirs(initrc_t)
+	# needs to chmod some devices in early boot
+	dev_setattr_generic_chr_files(initrc_t)
 
 	files_create_pid_dirs(initrc_t)
 	files_dontaudit_write_usr_dirs(initrc_t)

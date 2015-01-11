@@ -1,4 +1,4 @@
-policy_module(secadm, 2.4.1)
+policy_module(secadm, 2.5.0)
 
 ########################################
 #
@@ -73,4 +73,9 @@ optional_policy(`
 
 optional_policy(`
 	vlock_run(secadm_t, secadm_r)
+')
+
+ifdef(`distro_gentoo',`
+	# Moved out of files_relabel_non_auth_files as it cannot be used in tunable_policy otherwise
+	seutil_relabelto_bin_policy(secadm_t)
 ')

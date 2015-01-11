@@ -2,6 +2,7 @@
 /etc/make\.globals	--	gen_context(system_u:object_r:portage_conf_t,s0)
 /etc/make\.profile	-l	gen_context(system_u:object_r:portage_conf_t,s0)
 /etc/portage(/.*)?	gen_context(system_u:object_r:portage_conf_t,s0)
+/etc/portage/bin(/.*)?	--	gen_context(system_u:object_r:bin_t,s0)
 /etc/portage/gpg(/.*)?	gen_context(system_u:object_r:portage_gpg_t,s0)
 
 /usr/bin/gcc-config	--	gen_context(system_u:object_r:gcc_config_exec_t,s0)
@@ -17,6 +18,7 @@
 /usr/lib/portage/bin/ebuild\.sh	--	gen_context(system_u:object_r:bin_t,s0)
 /usr/lib/portage/bin/regenworld	--	gen_context(system_u:object_r:portage_exec_t,s0)
 /usr/lib/portage/bin/sandbox	--	gen_context(system_u:object_r:portage_exec_t,s0)
+
 
 /usr/portage(/.*)?	gen_context(system_u:object_r:portage_ebuild_t,s0)
 /usr/portage/distfiles/cvs-src(/.*)?	gen_context(system_u:object_r:portage_srcrepo_t,s0)
@@ -37,5 +39,9 @@
 /var/tmp/portage-pkg(/.*)?	gen_context(system_u:object_r:portage_tmp_t,s0)
 
 ifdef(`distro_gentoo',`
-/var/log/sandbox(/.*)?	gen_context(system_u:object_r:portage_log_t,s0)
+/usr/bin/emerge-webrsync				--	gen_context(system_u:object_r:portage_fetch_exec_t,s0)
+/usr/lib/python-exec/python[0-9]\.[0-9]*/glsa-check	--	gen_context(system_u:object_r:portage_exec_t,s0)
+/usr/lib/python-exec/python[0-9]\.[0-9]*/layman	--	gen_context(system_u:object_r:portage_fetch_exec_t,s0)
+/usr/lib/python-exec/python[0-9]\.[0-9]*/emerge	--	gen_context(system_u:object_r:portage_exec_t,s0)
+/var/log/sandbox(/.*)?					gen_context(system_u:object_r:portage_log_t,s0)
 ')

@@ -1,4 +1,4 @@
-policy_module(pcscd, 1.9.0)
+policy_module(pcscd, 1.10.0)
 
 ########################################
 #
@@ -14,7 +14,7 @@ init_script_file(pcscd_initrc_exec_t)
 
 type pcscd_var_run_t;
 files_pid_file(pcscd_var_run_t)
-init_daemon_run_dir(pcscd_var_run_t, "pcscd")
+init_daemon_pid_file(pcscd_var_run_t, dir, "pcscd")
 
 ########################################
 #

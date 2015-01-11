@@ -30,6 +30,17 @@ gen_tunable(chromium_use_java, false)
 ## </desc>
 gen_tunable(chromium_read_system_info, false)
 
+## <desc>
+## <p>
+## Allow chromium to bind to tcp ports
+## </p>
+## <p>
+## Although not needed for regular browsing, some chrome extensions need to
+## bind to tcp ports and accept connections.
+## </p>
+## </desc>
+gen_tunable(chromium_bind_tcp_unreserved_ports, false)
+
 type chromium_t;
 domain_dyntrans_type(chromium_t)
 
@@ -146,6 +157,7 @@ miscfiles_manage_user_certs(chromium_t)
 miscfiles_read_all_certs(chromium_t)
 miscfiles_read_localization(chromium_t)
 miscfiles_user_home_dir_filetrans_cert_home(chromium_t, dir, ".nss")
+miscfiles_user_home_dir_filetrans_cert_home(chromium_t, dir, ".pki")
 
 sysnet_dns_name_resolve(chromium_t) 
 
@@ -163,6 +175,12 @@ xdg_read_data_home_files(chromium_t)
 
 xserver_user_x_domain_template(chromium, chromium_t, chromium_tmpfs_t)
 
+tunable_policy(`chromium_bind_tcp_unreserved_ports',`
+	corenet_tcp_bind_generic_node(chromium_t)
+	corenet_tcp_bind_all_unreserved_ports(chromium_t)
+	allow chromium_t self:tcp_socket { listen accept };
+')
+
 tunable_policy(`chromium_read_system_info',`
 	kernel_read_kernel_sysctls(chromium_t)
 	# Memory optimizations & optimizations based on OS/version
@@ -174,6 +192,9 @@ tunable_policy(`chromium_read_system_info',`
 	storage_getattr_fixed_disk_dev(chromium_t)
 
 	files_read_etc_runtime_files(chromium_t)
+
+	dev_dontaudit_getattr_all_chr_files(chromium_t)
+	init_dontaudit_getattr_initctl(chromium_t)
 ',`
 	kernel_dontaudit_read_kernel_sysctls(chromium_t)
 	kernel_dontaudit_read_system_state(chromium_t)
@@ -218,6 +239,10 @@ optional_policy(`
 ifdef(`use_alsa',`
 	optional_policy(`
 		alsa_domain(chromium_t, chromium_tmpfs_t)
+	')
+
+	optional_policy(`
+		pulseaudio_client_domain(chromium_t, chromium_tmpfs_t)
 	')
 ')
 

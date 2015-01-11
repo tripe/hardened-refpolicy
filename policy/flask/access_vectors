@@ -447,6 +447,7 @@ class capability2
 	syslog
 	wake_alarm
 	block_suspend
+	audit_read
 }
 
 #
@@ -804,6 +805,18 @@ inherits database
 	write
 	import
 	export
+}
+
+class db_exception
+inherits database
+{
+	use
+}
+
+class db_datatype
+inherits database
+{
+	use
 }
 
 # network peer labels

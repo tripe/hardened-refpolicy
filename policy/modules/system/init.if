@@ -108,14 +108,6 @@ interface(`init_domain',`
 	role system_r types $1;
 
 	domtrans_pattern(init_t, $2, $1)
-
-	ifdef(`hide_broken_symptoms',`
-		# RHEL4 systems seem to have a stray
-		# fds open from the initrd
-		ifdef(`distro_rhel4',`
-			kernel_dontaudit_use_fds($1)
-		')
-	')
 ')
 
 ########################################
@@ -218,14 +210,6 @@ interface(`init_daemon_domain',`
 
 	ifdef(`direct_sysadm_daemon',`
 		userdom_dontaudit_use_user_terminals($1)
-	')
-
-	ifdef(`hide_broken_symptoms',`
-		# RHEL4 systems seem to have a stray
-		# fds open from the initrd
-		ifdef(`distro_rhel4',`
-			kernel_dontaudit_use_fds($1)
-		')
 	')
 
 	optional_policy(`
@@ -340,14 +324,6 @@ interface(`init_system_domain',`
 	role system_r types $1;
 
 	domtrans_pattern(initrc_t, $2, $1)
-
-	ifdef(`hide_broken_symptoms',`
-		# RHEL4 systems seem to have a stray
-		# fds open from the initrd
-		ifdef(`distro_rhel4',`
-			kernel_dontaudit_use_fds($1)
-		')
-	')
 ')
 
 ########################################
@@ -412,16 +388,50 @@ interface(`init_ranged_system_domain',`
 
 ########################################
 ## <summary>
-##	Mark the type as a daemon run dir
+##	Mark the file type as a daemon pid file, allowing initrc_t
+##	to create it
 ## </summary>
-## <param name="rundirtype">
+## <param name="filetype">
+##	<summary>
+##	Type to mark as a daemon pid file
+##	</summary>
+## </param>
+## <param name="class">
+##	<summary>
+##	Class on which the type is applied
+##	</summary>
+## </param>
+## <param name="filename">
+##	<summary>
+##	Filename of the file that the init script creates
+##	</summary>
+## </param>
+#
+interface(`init_daemon_pid_file',`
+	gen_require(`
+		attribute daemonpidfile;
+		type initrc_t;
+	')
+
+	typeattribute $1 daemonpidfile;
+
+	files_pid_file($1)
+	files_pid_filetrans(initrc_t, $1, $2, $3)
+')
+
+########################################
+## <summary>
+##	Mark the file type as a daemon run dir, allowing initrc_t
+##	to create it
+## </summary>
+## <param name="filetype">
 ##	<summary>
 ##	Type to mark as a daemon run dir
 ##	</summary>
 ## </param>
 ## <param name="filename">
 ##	<summary>
-##	Name of the run dir directory
+##	Filename of the directory that the init script creates
 ##	</summary>
 ## </param>
 #
@@ -431,9 +441,8 @@ interface(`init_daemon_run_dir',`
 		type initrc_t;
 	')
 
-	typeattribute $1 daemonrundir;
-
-	files_pid_filetrans(initrc_t, $1, dir, $2)
+	refpolicywarn(`$0($*) has been deprecated, use init_daemon_pid_file() instead.')
+	init_daemon_pid_file($1, dir, $2)
 ')
 
 ########################################
@@ -781,7 +790,7 @@ interface(`init_rw_initctl',`
 ## </summary>
 ## <param name="domain">
 ##	<summary>
-##	Domain allowed access.
+##	Domain to not audit.
 ##	</summary>
 ## </param>
 #
@@ -835,6 +844,14 @@ interface(`init_spec_domtrans_script',`
 	files_list_etc($1)
 	spec_domtrans_pattern($1, initrc_exec_t, initrc_t)
 
+	ifdef(`distro_gentoo',`
+		gen_require(`
+			type rc_exec_t;
+		')
+
+		domtrans_pattern($1, rc_exec_t, initrc_t)
+	')
+
 	ifdef(`enable_mcs',`
 		range_transition $1 initrc_exec_t:process s0;
 	')
@@ -874,6 +891,7 @@ interface(`init_domtrans_script',`
 		gen_require(`
 			type rc_exec_t;
 		')
+
 		domtrans_pattern($1, rc_exec_t, initrc_t)
 	')
 ')
@@ -1565,6 +1583,25 @@ interface(`init_dontaudit_read_script_status_files',`
 	dontaudit $1 initrc_state_t:file read_file_perms;
 ')
 
+######################################
+## <summary>
+##	Search the /run/systemd directory.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`init_search_run',`
+	gen_require(`
+		type init_var_run_t;
+	')
+
+	files_search_pids($1)
+	allow $1 init_var_run_t:dir search_dir_perms;
+')
+
 ########################################
 ## <summary>
 ##	Read init script temporary data.
@@ -1859,4 +1896,41 @@ interface(`init_read_script_status_files',`
 	')
 
 	read_files_pattern($1, initrc_state_t, initrc_state_t)
+')
+
+#########################################
+## <summary>
+##	Label to init script status files
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access
+##	</summary>
+## </param>
+#
+interface(`init_relabelto_script_state',`
+	gen_require(`
+		type initrc_state_t;
+	')
+
+	relabelto_files_pattern($1, initrc_state_t, initrc_state_t)
+	relabelto_dirs_pattern($1, initrc_state_t, initrc_state_t)
+')
+
+#########################################
+## <summary>
+##	Mark as a readable type for the initrc_t domain
+## </summary>
+## <param name="type">
+##	<summary>
+##	Type that initrc_t needs read access to
+##	</summary>
+## </param>
+#
+interface(`init_script_readable_type',`
+	gen_require(`
+		attribute init_script_readable;
+	')
+
+	typeattribute $1 init_script_readable;
 ')

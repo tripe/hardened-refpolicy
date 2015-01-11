@@ -27,6 +27,7 @@ template(`userdom_base_user_template',`
 		attribute userdomain;
 		type user_devpts_t, user_tty_device_t;
 		class context contains;
+		role $1_r;
 	')
 
 	attribute $1_file_type;
@@ -37,7 +38,6 @@ template(`userdom_base_user_template',`
 	corecmd_bin_entry_type($1_t)
 	domain_user_exemption_target($1_t)
 	ubac_constrained($1_t)
-	role $1_r;
 	role $1_r types $1_t;
 	allow system_r $1_r;
 
@@ -1241,6 +1241,17 @@ template(`userdom_admin_user_template',`
 	optional_policy(`
 		userhelper_exec($1_t)
 	')
+
+	ifdef(`distro_gentoo',`
+		# Grant block_suspend capability2 to administrators, this annoys the heck out of me
+		allow $1_t self:capability2 { block_suspend };
+		# Allow admins to interact with kernel, for instance using lsusb command
+		allow $1_t self:netlink_kobject_uevent_socket create_socket_perms;
+		# Moved out of files_relabel_non_auth_files as it cannot be used in tunable_policy otherwise
+		seutil_relabelto_bin_policy($1_t)
+		# allow to manage chr_files in user_tmp (for initrd's)
+		userdom_manage_user_tmp_chr_files($1_t)
+	')
 ')
 
 ########################################
@@ -1330,6 +1341,11 @@ template(`userdom_security_admin_template',`
 
 	optional_policy(`
 		samhain_run($1, $2)
+	')
+
+	ifdef(`distro_gentoo',`
+		# Moved out of files_relabel_non_auth_files as it cannot be used in tunable_policy otherwise
+		seutil_relabelto_bin_policy($1)
 	')
 ')
 
@@ -3540,6 +3556,7 @@ template(`userdom_user_content_access_template',`
 
 	tunable_policy(`$1_read_generic_user_content',`
 		userdom_list_user_tmp($2)
+		userdom_list_user_home_content($2)
 		userdom_read_user_home_content_files($2)
 		userdom_read_user_home_content_symlinks($2)
 		userdom_read_user_tmp_files($2)
@@ -3614,4 +3631,24 @@ interface(`userdom_manage_all_user_home_content',`
 	manage_lnk_files_pattern($1, user_home_content_type, user_home_content_type)
 	manage_fifo_files_pattern($1, user_home_content_type, user_home_content_type)
 	manage_sock_files_pattern($1, user_home_content_type, user_home_content_type)
+')
+
+########################################
+## <summary>
+##	Create, read, write, and delete user
+##	temporary character files.
+## </summary>
+## <param name="domain">
+##	<summary>
+##	Domain allowed access.
+##	</summary>
+## </param>
+#
+interface(`userdom_manage_user_tmp_chr_files',`
+	gen_require(`
+		type user_tmp_t;
+	')
+
+	manage_chr_files_pattern($1, user_tmp_t, user_tmp_t)
+	files_search_tmp($1)
 ')

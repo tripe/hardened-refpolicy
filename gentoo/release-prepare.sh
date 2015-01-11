@@ -1,33 +1,32 @@
 #!/bin/sh
 
-# Copyright 2013 Sven Vermeulen <swift@gentoo.org>
+# Copyright 2013,2014 Sven Vermeulen <swift@gentoo.org>
 # Licensed under the GPL-3 license
 
 # Prepare new policy release
 
-TRANSLATE="s:\(${HARDENEDREFPOL}\|${REFPOLRELEASE}\):refpolicy:g";
-OLDVERSION="${1}";
-NEWVERSION="${2}";
-REMOTELOCATION="swift@dev.gentoo.org:public_html/patches/selinux-base-policy";
+TRANSLATE="s:\(${HARDENEDREFPOL}\|${REFPOLRELEASE}\):refpolicy/:g";
+NEWVERSION="${1}";
+# If remote requires a different username, it should be set in ~/.ssh/config
+REMOTELOCATION="dev.gentoo.org:/home/swift/public_html/patches/selinux-base-policy";
 
 usage() {
-  echo "Usage: $0 <oldversion> <newversion>";
+  echo "Usage: $0 <newversion>";
   echo "";
-  echo "Example: $0 2.20130424-r2 2.20130424-r3"
+  echo "Example: $0 2.20140311-r5"
   echo "";
-  echo "The script will copy the ebuilds of the <oldversion> towards the";
-  echo "<newversion> and update the string occurrences of that version";
-  echo "(mostly for the BASEPOL variable).";
+  echo "The script will copy the live ebuilds towards the";
+  echo "<newversion>."
   echo "";
   echo "The following environment variables must be declared correctly for the script";
   echo "to function properly:";
   echo "  - GENTOOX86 should point to the gentoo-x86 checkout";
-  echo "    E.g. export GENTOOX86=\"/home/user/dev/gentoo-x86\"";
+  echo "    E.g. export GENTOOX86=\"/home/user/dev/gentoo-x86/\"";
   echo "  - HARDENEDREFPOL should point to the hardened-refpolicy.git checkout";
-  echo "    E.g. export HARDENEDREFPOL=\"/home/user/dev/hardened-refpolicy\"";
+  echo "    E.g. export HARDENEDREFPOL=\"/home/user/dev/hardened-refpolicy/\"";
   echo "  - REFPOLRELEASE should point to the current latest /release/ of the reference"
   echo "    policy (so NOT to a checkout), extracted somewhere on the file system."
-  echo "    E.g. export REFPOLRELEASE=\"/home/user/local/refpolicy-20130424\"";
+  echo "    E.g. export REFPOLRELEASE=\"/home/user/local/refpolicy-20130424/\"";
 }
 
 assertDirEnvVar() {
@@ -68,8 +67,9 @@ buildpatch() {
   tar cvjf patchbundle-selinux-base-policy-${NEWVERSION}.tar.bz2 *.patch > /dev/null 2>&1 || die "Failed to create patchbundle";
   printf "done\n";
 
-  printf "Copying patch bundle into /usr/portage/distfiles and dev.g.o... ";
-  cp patchbundle-selinux-base-policy-${NEWVERSION}.tar.bz2 /usr/portage/distfiles || die "Failed to copy patchbundle to /usr/portage/distfiles";
+  . /etc/portage/make.conf;
+  printf "Copying patch bundle into ${DISTDIR} location and dev.g.o... ";
+  cp patchbundle-selinux-base-policy-${NEWVERSION}.tar.bz2 ${DISTDIR} || die "Failed to copy patchbundle to ${DISTDIR}";
   scp patchbundle-selinux-base-policy-${NEWVERSION}.tar.bz2 ${REMOTELOCATION} > /dev/null 2>&1 || die "Failed to scopy patchbundle to ${REMOTELOCATION}";
   printf "done\n";
 }
@@ -85,20 +85,11 @@ createEbuilds() {
   done
   printf "done\n";
 
-  printf "Creating new ebuilds based on old version... ";
+  printf "Creating new ebuilds based on 9999 version... ";
   for PKG in *;
   do
-    [[ -f "${PKG}/${PKG}-${OLDVERSION}.ebuild" ]] || continue;
-    cp ${PKG}/${PKG}-${OLDVERSION}.ebuild ${PKG}/${PKG}-${NEWVERSION}.ebuild;
-    sed -i -e "s/BASEPOL=\"${OLDVERSION}\"/BASEPOL=\"${NEWVERSION}\"/g" ${PKG}/${PKG}-${NEWVERSION}.ebuild;
-  done
-  printf "done\n";
-
-  printf "Marking ebuilds as ~arch... ";
-  for PKG in *;
-  do
-    [[ -f "${PKG}/${PKG}-${NEWVERSION}.ebuild" ]] || continue;
-    sed -i -e "s/KEYWORDS=\"amd64 x86\"/KEYWORDS=\"~amd64 ~x86\"/g" ${PKG}/${PKG}-${NEWVERSION}.ebuild;
+    [[ -f "${PKG}/${PKG}-9999.ebuild" ]] || continue;
+    cp ${PKG}/${PKG}-9999.ebuild ${PKG}/${PKG}-${NEWVERSION}.ebuild;
   done
   printf "done\n";
 }
@@ -108,11 +99,11 @@ tagRelease() {
   printf "Creating tag ${NEWVERSION} in our repository... ";
   cd ${HARDENEDREFPOL};
   git tag -a ${NEWVERSION} -m "Release set of ${NEWVERSION}" > /dev/null 2>&1 || die "Failed to create tag";
-  git push origin ${NEWVERSION} > /dev/null 2>&1 || die "Faield to push tag to origin repository";
+  git push origin ${NEWVERSION} > /dev/null 2>&1 || die "Failed to push tag to origin repository";
   printf "done\n";
 };
 
-if [ $# -ne 2 ];
+if [ $# -ne 1 ];
 then
   usage;
   exit 3;
@@ -142,7 +133,7 @@ Please go do the following to finish up:
 
 Then, before finally committing - do a run yourself, ensuring that the right
 version is deployed of course:
-- "emerge -1 $(qlist -IC sec-policy)"
+- "emerge -1 \$(qlist -IC sec-policy)"
 
 Only then do a 'repoman commit -m 'Release of ${NEWVERSION}''.
 EOF

@@ -1,4 +1,4 @@
-policy_module(unprivuser, 2.5.1)
+policy_module(unprivuser, 2.6.0)
 
 # this module should be named user, but that is
 # a compile error since user is a keyword.
@@ -8,16 +8,12 @@ policy_module(unprivuser, 2.5.1)
 # Declarations
 #
 
-role user_r;
+#role user_r;
 
 userdom_unpriv_user_template(user)
 
 optional_policy(`
 	apache_role(user_r, user_t)
-')
-
-optional_policy(`
-	chromium_role(user_r, user_t)
 ')
 
 optional_policy(`
@@ -82,10 +78,6 @@ ifndef(`distro_redhat',`
 	')
 
 	optional_policy(`
-		gorg_role(user_r, user_t)
-	')
-
-	optional_policy(`
 		gpg_role(user_r, user_t)
 	')
 
@@ -99,10 +91,6 @@ ifndef(`distro_redhat',`
 
 	optional_policy(`
 		java_role(user_r, user_t)
-	')
-
-	optional_policy(`
-		links_role(user_r, user_t)
 	')
 
 	optional_policy(`
@@ -126,14 +114,6 @@ ifndef(`distro_redhat',`
 	')
 
 	optional_policy(`
-		mutt_role(user_r, user_t)
-	')
-
-	optional_policy(`
-		pan_role(user_r, user_t)
-	')
-
-	optional_policy(`
 		postgresql_role(user_r, user_t)
 	')
 
@@ -147,14 +127,6 @@ ifndef(`distro_redhat',`
 
 	optional_policy(`
 		rssh_role(user_r, user_t)
-	')
-
-	optional_policy(`
-		rtorrent_role(user_r, user_t)
-	')
-
-	optional_policy(`
-		skype_role(user_r, user_t)
 	')
 
 	optional_policy(`
@@ -199,6 +171,24 @@ ifndef(`distro_redhat',`
 ')
 
 ifdef(`distro_gentoo',`
+
+	optional_policy(`
+		android_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		at_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		chromium_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		devicekit_dbus_chat_disk(user_t)
+		devicekit_dbus_chat_power(user_t)
+	')
+
 	optional_policy(`
 		dropbox_role(user_r, user_t)
 	')
@@ -208,6 +198,38 @@ ifdef(`distro_gentoo',`
 	')
 
 	optional_policy(`
+		gorg_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		links_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		mutt_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		pan_role(user_r, user_t)
+	')
+
+	optional_policy(`
 		pulseaudio_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		rtorrent_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		skype_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		wine_role(user_r, user_t)
+	')
+
+	optional_policy(`
+		xscreensaver_role(user_r, user_t)
 	')
 ')
