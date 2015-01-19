@@ -1,0 +1,212 @@
+policy_module(cdm, 1.00)
+
+
+gen_require(`
+	attribute userdomain;
+
+	type bin_t;
+	type getty_t;
+	type local_login_t;
+	type shell_exec_t;
+	type user_tty_device_t;
+	type usr_t;
+	type xserver_t;
+
+	type staff_t;
+	type user_t;
+')
+
+
+########################################
+#
+# Declarations
+#
+
+# What follows is an (admittedly arbitrary) compromise
+# between enforcing expected behavior and a silly
+# overabundance of domains.
+#
+# Dead ends are given no attributes.
+
+attribute cdm_domain;
+attribute cdm-xlaunch_domain;
+attribute cdm-xlaunch_shell_domain;
+attribute cdm-xlaunch_util_domain;
+
+
+type cdm_exec_t;
+application_executable_file(cdm_exec_t)
+
+type cdm-xlaunch_exec_t;
+application_executable_file(cdm-xlaunch_exec_t)
+
+type cdm_etc_t;
+files_config_file(cdm_etc_t)
+
+type cdm_tmp_t;
+userdom_user_tmp_file(cdm_tmp_t)
+
+type cdm_usr_share_t;
+files_type(cdm_usr_share_t)
+
+
+type cdm_shell_t;
+userdom_user_application_domain(cdm_shell_t, shell_exec_t)
+
+type cdm_util_t;
+userdom_user_application_type(cdm_util_t)
+corecmd_bin_entry_type(cdm_util_t)
+
+type startx_t;
+userdom_user_application_type(startx_t)
+corecmd_bin_entry_type(startx_t)
+
+########################################
+#
+# Local policy
+#
+
+cdm_role_template(staff, staff_t, staff_r)
+cdm_role_template(user, user_t, user_r)
+
+########################################
+#
+# cdm_domain policy
+#
+
+allow cdm_domain self : fifo_file { read write };
+allow cdm_domain local_login_t : process sigchld;
+
+domtrans_pattern(cdm_domain, shell_exec_t, cdm_shell_t)
+corecmd_bin_domtrans(cdm_domain, cdm_util_t)
+
+allow cdm_domain getty_t : fd use;
+allow cdm_domain user_tty_device_t : chr_file { read write };
+
+allow cdm_domain cdm_etc_t : file { read getattr open };
+
+files_dontaudit_search_home(cdm_domain)
+userdom_dontaudit_search_user_home_dirs(cdm_domain)
+
+kernel_dontaudit_read_system_state(cdm_domain)
+
+miscfiles_read_localization(cdm_domain)
+
+########################################
+#
+# cdm_util_t policy
+#
+
+allow cdm_util_t cdm_domain : fd use;
+allow cdm_util_t cdm_domain : fifo_file { write getattr };
+allow cdm_util_t cdm_domain : process sigchld;
+
+allow cdm_util_t getty_t : fd use;
+allow cdm_util_t user_tty_device_t : chr_file { read write };
+
+miscfiles_read_localization(cdm_util_t)
+
+########################################
+#
+# cdm-xlaunch_domain policy
+#
+
+allow cdm-xlaunch_domain self : fifo_file read;
+
+allow cdm-xlaunch_domain getty_t : fd use;
+allow cdm-xlaunch_domain user_tty_device_t : chr_file { read write };
+
+files_dontaudit_search_home(cdm-xlaunch_domain)
+userdom_dontaudit_search_user_home_dirs(cdm-xlaunch_domain)
+
+kernel_dontaudit_read_system_state(cdm-xlaunch_domain)
+
+miscfiles_read_localization(cdm-xlaunch_domain)
+
+########################################
+#
+# cdm-xlaunch_shell_domain policy
+#
+
+allow cdm-xlaunch_shell_domain self : fifo_file read;
+
+fs_dontaudit_getattr_xattr_fs(cdm-xlaunch_shell_domain)
+
+files_dontaudit_search_home(cdm-xlaunch_shell_domain)
+userdom_dontaudit_search_user_home_dirs(cdm-xlaunch_shell_domain)
+
+kernel_dontaudit_read_system_state(cdm-xlaunch_shell_domain)
+
+fs_dontaudit_getattr_tmpfs(cdm-xlaunch_shell_domain)
+
+files_tmp_filetrans(cdm-xlaunch_shell_domain, cdm_tmp_t, file)
+userdom_user_tmp_filetrans(cdm-xlaunch_shell_domain, cdm_tmp_t, file)
+allow cdm-xlaunch_shell_domain cdm_tmp_t : file { create_file_perms rw_file_perms delete_file_perms };
+
+# on /usr/bin/startx
+#
+dontaudit cdm-xlaunch_shell_domain bin_t : file ioctl;
+#
+# /usr/tmp
+#
+allow staff_cdm-xlaunch_shell_t usr_t : lnk_file read;
+xserver_domtrans_xauth(cdm-xlaunch_shell_domain)
+miscfiles_read_localization(cdm-xlaunch_shell_domain)
+
+########################################
+#
+# cdm-xlaunch_util_domain policy
+#
+
+allow cdm-xlaunch_util_domain cdm-xlaunch_domain : fd use;
+allow cdm-xlaunch_util_domain cdm-xlaunch_domain : fifo_file { write getattr };
+allow cdm-xlaunch_util_domain cdm-xlaunch_domain : process sigchld;
+
+allow cdm-xlaunch_util_domain getty_t : fd use;
+allow cdm-xlaunch_util_domain user_tty_device_t : chr_file { read write };
+
+# cdm-xlaunch -> setsid -> startx
+#
+corecmd_bin_domtrans(cdm-xlaunch_util_domain, startx_t)
+xserver_domtrans(cdm-xlaunch_util_domain)
+miscfiles_read_localization(cdm-xlaunch_util_domain)
+
+########################################
+#
+# hostname_t policy
+#
+
+# /dev/null
+#
+allow hostname_t cdm-xlaunch_domain : fd use;
+
+########################################
+#
+# userdomain policy
+#
+
+allow userdomain cdm-xlaunch_shell_domain : fd use;
+allow userdomain cdm-xlaunch_shell_domain : fifo_file write;
+allow userdomain cdm-xlaunch_shell_domain : process sigchld;
+
+# /dev/null
+#
+allow userdomain cdm-xlaunch_domain : fd use;
+
+########################################
+#
+# xauth_t policy
+#
+
+# /dev/null
+#
+allow xauth_t cdm-xlaunch_domain : fd use;
+
+dontaudit xauth_t cdm_tmp_t : file read;
+
+########################################
+#
+# xserver_t policy
+#
+
+allow xserver_t cdm-xlaunch_domain : fd use;

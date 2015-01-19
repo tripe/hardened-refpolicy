@@ -1,0 +1,6 @@
+/etc/cdmrc		--	gen_context(system_u:object_r:cdm_etc_t,s0)
+
+/usr/bin/cdm		--	gen_context(system_u:object_r:cdm_exec_t,s0)
+/usr/bin/cdm-xlaunch	--	gen_context(system_u:object_r:cdm-xlaunch_exec_t,s0)
+
+/usr/share/cdm(/.*)?		gen_context(system_u:object_r:cdm_usr_share_t,s0)

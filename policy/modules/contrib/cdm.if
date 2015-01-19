@@ -1,0 +1,106 @@
+## <summary>cdm policy</summary>
+## <desc>
+##	<p>
+##		Policy for cdm.
+##	</p>
+## </desc>
+
+
+###############################
+## <summary>
+##	A role template for cdm.
+## </summary>
+## <param name="domain_prefix">
+##	<summary>
+##	Prefix associated with the role.
+##	</summary>
+## </param>
+## <param name="role_domain">
+##	<summary>
+##	The domain associated with the role.
+##	</summary>
+## </param>
+## <param name="role">
+##	<summary>
+##	Role for which to assign types.
+##	</summary>
+## </param>
+
+template(`cdm_role_template',`
+
+	gen_require(`
+		attribute cdm_domain;
+		attribute cdm-xlaunch_domain;
+		attribute cdm-xlaunch_shell_domain;
+		attribute cdm-xlaunch_util_domain;
+
+		role $3;
+
+		type cdm_exec_t;
+		type cdm_shell_t;
+		type cdm_util_t;
+		type cdm-xlaunch_exec_t;
+		type shell_exec_t;
+		type startx_t;
+	')
+
+	########################################
+	#
+	# Declarations
+	#
+
+	type $1_cdm_t, cdm_domain;
+	userdom_user_application_domain( $1_cdm_t, cdm_exec_t )
+
+	type $1_cdm-xlaunch_t, cdm-xlaunch_domain;
+	userdom_user_application_domain( $1_cdm-xlaunch_t, cdm-xlaunch_exec_t )
+
+	type $1_cdm-xlaunch_shell_t, cdm-xlaunch_shell_domain;
+	userdom_user_application_domain( $1_cdm-xlaunch_shell_t, shell_exec_t )
+
+	type $1_cdm-xlaunch_util_t, cdm-xlaunch_util_domain;
+	userdom_user_application_type($1_cdm-xlaunch_util_t)
+	corecmd_bin_entry_type($1_cdm-xlaunch_util_t)
+
+	role $3 types { $1_cdm_t cdm_shell_t cdm_util_t $1_cdm-xlaunch_t $1_cdm-xlaunch_shell_t $1_cdm-xlaunch_util_t startx_t };
+
+	########################################
+	#
+	# $2 policy
+	#
+
+	domtrans_pattern( $2, cdm_exec_t, $1_cdm_t )
+
+	########################################
+	#
+	# $1_cdm_t policy
+	#
+
+	domtrans_pattern( $1_cdm_t, cdm-xlaunch_exec_t, $1_cdm-xlaunch_t )
+
+	########################################
+	#
+	# $1_cdm-xlaunch_t policy
+	#
+
+	domtrans_pattern( $1_cdm-xlaunch_t, shell_exec_t, $1_cdm-xlaunch_shell_t )
+	corecmd_bin_domtrans( $1_cdm-xlaunch_t, $1_cdm-xlaunch_util_t )
+
+	domain_interactive_fd($1_cdm-xlaunch_t)
+
+	########################################
+	#
+	# $1_cdm-xlaunch_util_t policy
+	#
+
+	domtrans_pattern( $1_cdm-xlaunch_util_t, shell_exec_t, $1_cdm-xlaunch_shell_t )
+
+	########################################
+	#
+	# $1_cdm-xlaunch_shell_t policy
+	#
+
+	corecmd_bin_domtrans( $1_cdm-xlaunch_shell_t, $2 )
+
+	hostname_run( $1_cdm-xlaunch_shell_t, $3 )
+')
