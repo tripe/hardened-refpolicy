@@ -7,6 +7,13 @@ policy_module(mozilla, 2.8.0)
 
 ## <desc>
 ##	<p>
+##		Grant permissions required for e10s.
+##	</p>
+## </desc>
+gen_tunable(mozilla_e10s, false)
+
+## <desc>
+##	<p>
 ##	Determine whether mozilla can
 ##	make its stack executable.
 ##	</p>
@@ -198,6 +205,14 @@ xserver_dontaudit_getattr_xdm_tmp_sockets(mozilla_t)
 
 tunable_policy(`allow_execmem',`
 	allow mozilla_t self:process execmem;
+')
+
+tunable_policy(`mozilla_e10s',`
+	# Unfortunately, e10s content processes are execd from the same bin as
+	# plugins, so must exist in the same domain...
+	#
+	allow mozilla_t mozilla_plugin_tmpfs_t : file { read write append };
+	dontaudit mozilla_t mozilla_plugin_tmpfs_t : file getattr;
 ')
 
 tunable_policy(`mozilla_execstack',`
@@ -436,6 +451,10 @@ miscfiles_read_generic_certs(mozilla_plugin_t)
 
 tunable_policy(`allow_execmem',`
 	allow mozilla_plugin_t self:process execmem;
+')
+
+tunable_policy(`mozilla_e10s',`
+	allow mozilla_plugin_t mozilla_tmp_t : file { read write };
 ')
 
 tunable_policy(`mozilla_execstack',`
