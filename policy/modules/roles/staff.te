@@ -196,6 +196,10 @@ ifdef(`distro_gentoo',`
 	')
 
 	optional_policy(`
+		cdm_role_template(staff, staff_t, staff_r)
+	')
+
+	optional_policy(`
 		chromium_role(staff_r, staff_t)
 	')
 

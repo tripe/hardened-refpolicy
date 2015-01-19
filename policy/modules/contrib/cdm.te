@@ -11,9 +11,6 @@ gen_require(`
 	type user_tty_device_t;
 	type usr_t;
 	type xserver_t;
-
-	type staff_t;
-	type user_t;
 ')
 
 
@@ -60,14 +57,6 @@ corecmd_bin_entry_type(cdm_util_t)
 type startx_t;
 userdom_user_application_type(startx_t)
 corecmd_bin_entry_type(startx_t)
-
-########################################
-#
-# Local policy
-#
-
-cdm_role_template(staff, staff_t, staff_r)
-cdm_role_template(user, user_t, user_r)
 
 ########################################
 #
