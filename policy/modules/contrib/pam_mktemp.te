@@ -1,0 +1,61 @@
+policy_module(pam_mktemp, 1.00)
+
+
+########################################
+#
+# Declarations
+#
+
+## <desc>
+##	<p>
+##	Allow noatsecure transitions where required to preserve TMP.
+##	<p>
+## </desc>
+##
+
+gen_tunable(pam_mktemp, false)
+
+########################################
+#
+# cdm policy
+#
+
+optional_policy(`
+
+	tunable_policy(`pam_mktemp',`
+
+		gen_require(`
+
+			attribute userdomain;
+			attribute cdm_domain;
+			attribute cdm-xlaunch_domain;
+			attribute cdm-xlaunch_shell_domain;
+			attribute cdm-xlaunch_util_domain;
+		')
+
+		allow userdomain cdm_domain : process noatsecure;
+		allow cdm_domain cdm-xlaunch_domain : process noatsecure;
+		allow cdm-xlaunch_domain cdm-xlaunch_util_domain : process noatsecure;
+		allow cdm-xlaunch_shell_domain userdomain : process noatsecure;
+		allow cdm-xlaunch_util_domain cdm-xlaunch_shell_domain : process noatsecure;
+	')
+')
+
+########################################
+#
+# local_login_t policy
+#
+
+optional_policy(`
+
+	tunable_policy(`pam_mktemp',`
+
+		gen_require(`
+
+			attribute userdomain;
+			type local_login_t;
+		')
+
+		allow local_login_t userdomain : process noatsecure;
+	')
+')
